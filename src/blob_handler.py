@@ -21,6 +21,7 @@ def save_point_cloud_to_ply(point_cloud, file_path):
         return True
     except Exception as e:
         print(f"Error saving point cloud to PLY: {e}")
+        print(f"point_cloud class == {point_cloud.__class__}  file_path == {file_path.__class__}")
         return False
 
 def upload_ply_to_blob_storage(blob_name):

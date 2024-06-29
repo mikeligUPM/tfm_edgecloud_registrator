@@ -54,9 +54,9 @@ def create_pc_from_encoded_data(color_encoded, depth_encoded, K):
     print(f"PCD len before downsampling {len(pcd.points)}")
     pcd = pcd.voxel_down_sample(voxel_size=VOXEL_SIZE)
     print(f"PCD len after downsampling {len(pcd.points)}")
-    # pcd.estimate_normals()
+    pcd.estimate_normals()
     pcd.estimate_normals(search_param=o3d.geometry.KDTreeSearchParamHybrid(radius=0.1, max_nn=30))
-    print(f"PCD created with {len(pcd.points)} points")
+    # print(f"PCD created with {len(pcd.points)} points")
     return pcd
 
 
@@ -89,15 +89,15 @@ def process_frame(message_json_list, frame_id):
     target_registration = message.get('target_model')
     registration_func = registration_methods.get(target_registration)
     if registration_func:
-        final_fused_point_cloud = registration_func(pcd_list)
+        final_fused_point_cloud = registration_func(pcd_list, frame_id) ## final_fused_point_cloud is None, check why after dinner
     else:
         raise ValueError(f"Unknown registration method: {target_registration}")
     
     
     # Save to Blob Storage
     # blob_name_reg = f"reg_{ts}_{frame_id}.ply"
-    blob_name_reg = f"reg_{frame_id}.ply"
-    save_and_upload_pcd(final_fused_point_cloud, blob_name_reg)
+    # blob_name_reg = f"reg_{frame_id}.ply"
+    # save_and_upload_pcd(final_fused_point_cloud, blob_name_reg)
 
 def on_connect(client, userdata, flags, rc):
     print(f"Connected with result code {rc}")
@@ -117,10 +117,11 @@ def on_message(client, userdata, msg):
         if len(received_frames_dict[frame_id]) == CAMERA_COUNT:
             print(f"received_frames_dict[frame_id] == CAMERA_COUNT GOING TO PROCESS {frame_id}")
             # Start a new process for the long time function
-            frame_data_copy = copy.deepcopy(received_frames_dict[frame_id])
-            process = Process(target=process_frame, args=(frame_data_copy, frame_id,))
-            process.start()
-            received_frames_dict[frame_id] = []
+            # frame_data_copy = copy.deepcopy(received_frames_dict[frame_id])
+            # process = Process(target=process_frame, args=(frame_data_copy, frame_id,))
+            # process.start()
+            process_frame(received_frames_dict[frame_id], frame_id)
+            # received_frames_dict[frame_id] = []
         else:
             print(f"Count = {len(received_frames_dict[frame_id])}")
 

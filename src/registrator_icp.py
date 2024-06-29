@@ -2,10 +2,10 @@ import open3d as o3d
 import numpy as np
 
 from constants import THRESHOLD
+from blob_handler import save_and_upload_pcd
 
 
-
-def icp_p2p_registration(pcd_list):
+def icp_p2p_registration(pcd_list, frame_id):
     # register point cloud
     registered_point_cloud_generator = icp_p2p_register_and_yield_point_clouds(pcd_list)
     print("P2P Generator created")
@@ -20,7 +20,7 @@ def icp_p2p_registration(pcd_list):
     
     # save pcd and upload to blob
 
-def icp_p2l_registration(pcd_list):
+def icp_p2l_registration(pcd_list, frame_id):
         # register point cloud
     registered_point_cloud_generator = icp_p2l_register_and_yield_point_clouds(pcd_list)
     print("P2L Generator created")
@@ -32,8 +32,11 @@ def icp_p2l_registration(pcd_list):
     
     for i, pcd in enumerate(registered_point_cloud_generator):
         final_fused_point_cloud += pcd  # Use the += operator to merge point clouds
+    return final_fused_point_cloud
+    # # save pcd and upload to blob
+    # blob_name_reg = f"reg_{frame_id}.ply"
+    # save_and_upload_pcd(final_fused_point_cloud, blob_name_reg)
     
-    # save pcd and upload to blob
 
 
 def icp_p2l_register_and_yield_point_clouds(point_cloud_list):

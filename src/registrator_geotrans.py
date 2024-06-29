@@ -1,13 +1,18 @@
 import torch
 import numpy as np
 
-from geotransformer.utils.data import registration_collate_fn_stack_mode
-from geotransformer.utils.torch import to_cuda, release_cuda
-from geotransformer.utils.open3d import make_open3d_point_cloud
-from config import make_cfg
-from model import create_model
+
+from Geotransformer.geotransformer.utils.data import registration_collate_fn_stack_mode
+from Geotransformer.geotransformer.utils.torch import to_cuda, release_cuda
+from Geotransformer.geotransformer.utils.open3d import make_open3d_point_cloud
+
+from GeoTransformer.experiments.geotransformer.dmatch.config import make_cfg
+from GeoTransformer.experiments.geotransformer.dmatch.model import create_model
+# from config import make_cfg
+# from model import create_model
 import open3d as o3d
 
+print("IMPORTS OK")
 
 ### Helper functions
 def process_point_clouds(model, cfg, src_points, ref_points):
@@ -69,7 +74,7 @@ def register_and_yield_point_clouds(point_cloud_list, model, cfg):
         yield transformed_pc  # Yield the transformed point cloud
 
 
-def geotrans_registration(pcd_list):
+def geotrans_registration(pcd_list, frame_id):
     cfg = make_cfg()
     model = create_model(cfg).cuda()
     state_dict = torch.load('weights/geotransformer-3dmatch.pth.tar')
@@ -83,7 +88,7 @@ def geotrans_registration(pcd_list):
     final_fused_point_cloud = []
     for i, pcd in enumerate(registered_point_cloud_generator):
         final_fused_point_cloud.append(pcd)
-
-    # Visualization
-    o3d.visualization.draw_geometries(final_fused_point_cloud, window_name=f"Final Fused Point Cloud. Total_PCDs = {len(final_fused_point_cloud)}")
+    return final_fused_point_cloud
+    # # Visualization
+    # o3d.visualization.draw_geometries(final_fused_point_cloud, window_name=f"Final Fused Point Cloud. Total_PCDs = {len(final_fused_point_cloud)}")
     
