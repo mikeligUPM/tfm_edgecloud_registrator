@@ -40,7 +40,7 @@ def process_point_clouds(model, cfg, src_points, ref_points):
     ref_points = output_dict["ref_points"]
     src_points = output_dict["src_points"]
     estimated_transform = output_dict["estimated_transform"]
-    transform = data_dict["transform"] if "transform" in data_dict else None
+    # transform = data_dict["transform"] if "transform" in data_dict else None
 
     return ref_points, src_points, estimated_transform
 
@@ -61,20 +61,21 @@ def transform_src_to_ref(src_points, ref_points, model, cfg):
 
 # Define the generator function for sequential registration
 def register_and_yield_point_clouds(point_cloud_list, model, cfg):
-    ref_points = point_cloud_list[0]
-    ref_pc = make_open3d_point_cloud(ref_points)
-    ref_pc.estimate_normals()
+    ref_points = point_cloud_list[0].points
+    ref_pc = point_cloud_list[0]
+    # ref_pc = make_open3d_point_cloud(ref_points)
+    # ref_pc.estimate_normals()
     
     yield ref_pc  # Yield the reference point cloud as is
 
     for i in range(1, len(point_cloud_list)):
-        src_points = point_cloud_list[i]
+        src_points = point_cloud_list[i].points
         ref_pc, transformed_pc = transform_src_to_ref(src_points, ref_points, model, cfg)
         
         yield transformed_pc  # Yield the transformed point cloud
 
 
-def geotrans_registration(pcd_list, frame_id):
+def geotrans_registration(pcd_list):
     cfg = make_cfg()
     model = create_model(cfg).cuda()
     state_dict = torch.load('weights/geotransformer-3dmatch.pth.tar')
@@ -85,9 +86,14 @@ def geotrans_registration(pcd_list, frame_id):
     registered_point_cloud_generator = register_and_yield_point_clouds(pcd_list, model, cfg)
 
     # Collect the final fused point cloud by iterating over the generator
-    final_fused_point_cloud = []
+    # final_fused_point_cloud = []
+    # for i, pcd in enumerate(registered_point_cloud_generator):
+    #     final_fused_point_cloud.append(pcd)
+    
+    final_fused_point_cloud = o3d.geometry.PointCloud()
+
     for i, pcd in enumerate(registered_point_cloud_generator):
-        final_fused_point_cloud.append(pcd)
+        final_fused_point_cloud += pcd  # Use the += operator to merge point clouds
     return final_fused_point_cloud
     # # Visualization
     # o3d.visualization.draw_geometries(final_fused_point_cloud, window_name=f"Final Fused Point Cloud. Total_PCDs = {len(final_fused_point_cloud)}")

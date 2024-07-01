@@ -76,7 +76,6 @@ def process_frame(message_json_list, frame_id):
         ts = message.get('send_ts')
         K = message.get('K')
         
-        
         pc = create_pc_from_encoded_data(enc_c, enc_d, K)
         if pc is None:
             print(f"Error creating point cloud for camera {camera_name} with frame {frame_id}")
@@ -93,7 +92,7 @@ def process_frame(message_json_list, frame_id):
         final_fused_point_cloud = registration_func(pcd_list)
     else:
         raise ValueError(f"Unknown registration method: {target_registration}")
-    blob_name_reg = f"reg__{frame_id}__{target_registration}.ply"
+    blob_name_reg = f"reg_{frame_id}.ply"
     save_and_upload_pcd(final_fused_point_cloud, blob_name_reg)
 
 def on_connect(client, userdata, flags, rc):
