@@ -3,7 +3,7 @@ import numpy as np
 
 from constants import VOXEL_SIZE
 
-def calculate_registration_metrics(pc_source, pc_ref, threshold):
+def calculate_registration_metrics_v1(pc_source, pc_ref, threshold):
     # Calculate distances between corresponding points
     distances = pc_source.compute_point_cloud_distance(pc_ref)
 
@@ -32,6 +32,45 @@ def calculate_registration_metrics(pc_source, pc_ref, threshold):
     # Here we assume the ground truth is that all points should be matched within the threshold
     registration_recall = inlier_ratio  # Since all points are considered for recall
     print(f"### Registration Recall: {registration_recall}")
+
+def calculate_registration_metrics(pc_source, pc_ref, threshold, p2p_registration=True):
+    if p2p_registration:
+        # Calculate point-to-point RMSE
+        distances_p2p = np.linalg.norm(np.asarray(pc_source.points) - np.asarray(pc_ref.points), axis=1)
+        point_to_point_rmse = np.sqrt(np.mean(distances_p2p ** 2))
+        print(f"### Point-to-point RMSE: {point_to_point_rmse:.4f}")
+    else:
+        # Calculate point-to-plane RMSE
+        distances_p2l = np.abs(np.sum((np.asarray(pc_source.points) - np.asarray(pc_ref.points)) * np.asarray(pc_ref.normals), axis=1))
+        point_to_plane_rmse = np.sqrt(np.mean(distances_p2l ** 2))
+        print(f"### Point-to-plane RMSE: {point_to_plane_rmse:.4f}")
+
+    # Calculate planar surface deviation
+    planar_deviation = np.mean(distances_p2l)
+    print(f"### Planar surface deviation: {planar_deviation:.4f}")
+
+    # Calculate percentage of overlapping points
+    _, inds = o3d.pipelines.registration.compute_point_cloud_distance(pc_source, pc_ref)
+    overlap_ratio = np.sum(np.asarray(inds) < 0.1) / float(len(pc_source.points))
+    print(f"### Overlap ratio: {overlap_ratio:.4f}")
+
+    # Calculate RMSE, Inlier Ratio, False Match Rate, Registration Recall
+    distances = pc_source.compute_point_cloud_distance(pc_ref)
+    distances = np.asarray(distances)
+    rmse = np.sqrt(np.mean(np.square(distances)))
+    print(f"### RMSE: {rmse:.4f}")
+
+    inlier_ratio = np.sum(distances < threshold) / len(distances)
+    print(f"### Inlier Ratio: {inlier_ratio:.4f}")
+
+    fmr = np.sum(distances >= threshold) / len(distances)
+    print(f"### False Match Rate: {fmr:.4f}")
+
+    registration_recall = inlier_ratio
+    print(f"### Registration Recall: {registration_recall:.4f}")
+
+
+
 
 
 
