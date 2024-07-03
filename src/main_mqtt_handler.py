@@ -33,7 +33,7 @@ def create_pc_from_encoded_data(color_encoded, depth_encoded, K):
     if len(depth_image_data) % 2 != 0:
         depth_image_data += b'\x00'
         print(f"Adjusted len depth_image_data: {len(depth_image_data)}\n")
-    
+
     if len(color_image_data) % 2 != 0:
         color_image_data += b'\x00'
         print(f"Adjusted len depth_image_data: {len(depth_image_data)}\n")
@@ -53,7 +53,7 @@ def create_pc_from_encoded_data(color_encoded, depth_encoded, K):
     intrinsics.set_intrinsics(color_image.shape[1], color_image.shape[0], K[0][0], K[1][1], K[0][2], K[1][2])
 
     pcd = o3d.geometry.PointCloud.create_from_rgbd_image(rgbd_image, intrinsics)
-    
+
     print(f"PCD len before downsampling {len(pcd.points)}")
     pcd = pcd.voxel_down_sample(voxel_size=VOXEL_SIZE)
     print(f"PCD len after downsampling {len(pcd.points)}")
@@ -75,8 +75,8 @@ def process_frame(message_json_list, frame_id):
         enc_d = message.get('enc_d')
         ts = message.get('send_ts')
         K = message.get('K')
-        
-        
+
+
         pc = create_pc_from_encoded_data(enc_c, enc_d, K)
         if pc is None:
             print(f"Error creating point cloud for camera {camera_name} with frame {frame_id}")
@@ -84,9 +84,12 @@ def process_frame(message_json_list, frame_id):
             continue
         pcd_list.append(pc)
         i += 1
-        
+        # blob_name_reg = f"test__{frame_id}_{i}.ply"  #testing only
+        # save_and_upload_pcd(pc, blob_name_reg) #testing only
+    # x = input("TESTING CONTROL C NOW")
     print(f"PCD List Length = {len(pcd_list)}")
     
+
     target_registration = message_json_list[0].get('target_model')
     registration_func = registration_methods.get(target_registration)
     if registration_func:
@@ -124,6 +127,15 @@ def process_message(msg):
             received_frames_dict[frame_id][1].cancel()  # Stop the timer
             frame_data_copy = received_frames_dict.pop(frame_id)[0]
             threading.Thread(target=process_frame, args=(frame_data_copy, frame_id)).start()
+        else:
+            # As a new event has arrived, reset timer
+            if received_frames_dict[frame_id][1] is not None:
+                received_frames_dict[frame_id][1].cancel()
+            received_frames_dict[frame_id] = (
+                received_frames_dict[frame_id][0],
+                Timer(batch_timeout, on_batch_timeout, args=[frame_id])
+            )
+            received_frames_dict[frame_id][1].start()
 
 def on_message(client, userdata, msg):
     threading.Thread(target=process_message, args=(msg,)).start()
@@ -132,7 +144,7 @@ def main():
     client = mqtt.Client()
     client.on_connect = on_connect
     client.on_message = on_message
-    
+
     client.connect(MQTT_BROKER, MQTT_PORT, 60)
     client.loop_forever()
 
