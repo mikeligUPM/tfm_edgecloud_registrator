@@ -62,6 +62,9 @@ def encode_png_to_base64(file_path):
 def build_publish_encoded_msg(client, frame_id, camera_name, encoded_color_image, encoded_depth_image, K):
     dt_now = datetime.now(tz=timezone.utc)
     send_ts = round(dt_now.timestamp() * 1000)
+
+    # encoded_color_image = "test_color"
+    # encoded_depth_image = "test_depth"
     
     payload = {
         "frame_id": frame_id,
@@ -70,20 +73,20 @@ def build_publish_encoded_msg(client, frame_id, camera_name, encoded_color_image
         "enc_d": encoded_depth_image,
         "K": K,
         "send_ts": send_ts,
-        "target_model": "icp_p2l"  # either "icp_p2p", "icp_p2l" or "geotransformer"
+        "target_model": "icp_p2p"  # either "icp_p2p", "icp_p2l" or "geotransformer"
     }
 
     # save_json_to_local(payload, f"encoded_jsons\\{camera_name}_{frame_id}.json")
     # client.publish(TOPIC, json.dumps(payload))
-    print(f"Sent message to IoT Hub: {payload}")
-    # print(f"Sent message to IoT Hub: {frame_id}")
+    # print(f"Test payload: {payload}")
+    print(f"Sent message to IoT Hub: {frame_id}")
     time.sleep(0.5)
 
 
 def get_image_path(camera_dir, frame_id):
     if '3DMatch' in camera_dir:
-        color_filename = f"{frame_id}.color.png"
-        depth_filename = f"{frame_id}.depth.png"
+        color_filename = f"{frame_id}_color.png"
+        depth_filename = f"{frame_id}_depth.png"
     else:
         camera_name = camera_dir.split("\\")[-1]
         color_filename = f"{camera_name}_color_{frame_id}.png"
@@ -116,18 +119,24 @@ def main(client, base_directory, send_freq=3):
         k_dict = create_k_dict_by_camera("cam_params.json")
     else:
         k_dict = K
+    print(f"K dict class: {k_dict.__class__}")
 
     while True:
         camera_dirs = [os.path.join(base_directory, d) for d in os.listdir(base_directory) if os.path.isdir(os.path.join(base_directory, d))]
 
         chosen_frame = random.choice(range(1, 219))  # Assuming frames are from 1 to 219
         # chosen_frame = 125
+        
+        if '3DMatch' in base_directory:
+            chosen_frame_str = f"frame-{chosen_frame:06d}"
+        else: # own data
+            chosen_frame_str = f"f{chosen_frame:04d}"
         print(f"Chosen frame: f{chosen_frame:04d}")
 
         threads = []
         for chosen_camera_dir in camera_dirs:
             print(f"Chosen camera directory: {chosen_camera_dir}")
-            thread = threading.Thread(target=process_frame, args=(client, k_dict, chosen_camera_dir, f"f{chosen_frame:04d}"))
+            thread = threading.Thread(target=process_frame, args=(client, k_dict, chosen_camera_dir, chosen_frame_str))
             threads.append(thread)
             thread.start()
             time.sleep(0.5)
@@ -146,9 +155,25 @@ def ds_selection_prompt():
         return 'data\\png_data'
     
 
+# if __name__ == "__main__":
+#     base_directory = ds_selection_prompt()
+#     print(f"Selected dataset dir: {base_directory}")
+#     try:
+#         # Connection to MQTT broker
+#         client = mqtt.Client()
+#         client.connect(BROKER_IP, BROKER_PORT)
+#     except Exception as e:
+#         print(f"Could not connect to broker: {e}")
+#     else:
+#         # Starting data publication
+#         print("Connected. Starting publish")
+#         main(client)
+
 if __name__ == "__main__":
-    test_dir = "C:\\master_iot\\0_MIOT_GDEM\\final_code\\" # dir where the datasets are located
+    test_dir = "C:\\master_iot\\0_MIOT_GDEM\\final_code\\"
     base_directory = test_dir + ds_selection_prompt() # testing only
+    # base_directory = ds_selection_prompt()
+
     print(f"Selected dataset dir: {base_directory}")
     client = None
     main(client, base_directory, send_freq=5)
