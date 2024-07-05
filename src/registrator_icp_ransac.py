@@ -96,9 +96,6 @@ def icp_p2p_registration_ransac(pcd_list):
     threshold = VOXEL_SIZE * 0.4
     final_fused_point_cloud = o3d.geometry.PointCloud()
 
-    # for i, pcd in enumerate(registered_point_cloud_generator):
-    #     final_fused_point_cloud = o3d.geometry.PointCloud.concatenate([final_fused_point_cloud, pcd])
-
     for i, pcd in enumerate(registered_point_cloud_generator):
         final_fused_point_cloud += pcd  # Use the += operator to merge point clouds
         calculate_registration_metrics(pcd, pcd_list[0], threshold, i=i+1)

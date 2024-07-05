@@ -10,8 +10,17 @@ import time
 
 from constants import MQTT_BROKER, MQTT_PORT, MQTT_TOPIC, CAMERA_COUNT, VOXEL_SIZE
 from registrator_icp import icp_p2p_registration, icp_p2l_registration
+from registrator_icp_ransac import icp_p2p_registration_ransac, icp_p2l_registration_ransac
 from registrator_geotrans import geotrans_registration
 from blob_handler import save_and_upload_pcd
+
+registration_methods = {
+    "icp_p2p": icp_p2p_registration,
+    "icp_p2l": icp_p2l_registration,
+    "icp_p2p_ransac": icp_p2p_registration_ransac,
+    "icp_p2l_ransac": icp_p2l_registration_ransac,
+    "geotransformer": geotrans_registration,
+}
 
 batch_timeout = 10
 
