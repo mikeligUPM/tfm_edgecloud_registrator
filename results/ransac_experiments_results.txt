@@ -1,0 +1,69 @@
+`
+ICP Point-to-Point identity matrix initialization
+Init time: 2024-07-04 17:41:37:047819 UTC
+End time: 2024-07-04 17:41:42:949263 UTC
+Results:
+### RMSE: 0.22484754362961334
+### Distance Threshold: 0.010000000000000002
+### Inlier Ratio: 0.14032063554789434
+### False Match Rate: 0.8596793644521057
+### Registration Recall: 0.14032063554789434
+
+ICP Point-to-Plane with identity matrix initialization
+Init time: 2024-07-04 17:42:33:421884 UTC
+End time: 2024-07-04 17:42:39:413002 UTC
+Results:
+### RMSE: 0.22428294053063882
+### Distance Threshold: 0.010000000000000002
+### Inlier Ratio: 0.14226142200594755
+### False Match Rate: 0.8577385779940524
+### Registration Recall: 0.14226142200594755
+
+-------------------------------------------------------
+
+ICP Point-to-Point with RANSAC global registration in each iteration
+Init time: 2024-07-04 17:44:41:354127 UTC
+End time: 2024-07-04 17:45:19:997131 UTC
+Results: 
+### RMSE: 0.3017355712784127
+### Distance Threshold: 0.010000000000000002
+### Inlier Ratio: 0.2548999729656664
+### False Match Rate: 0.7451000270343336
+### Registration Recall: 0.2548999729656664
+
+
+ICP Point-to-Plane with RANSAC global registration in each iteration
+Init time: 2024-07-04 17:49:36:204626 UTC
+End time: 2024-07-04 17:50:04:315509 UTC
+Results:
+### RMSE: 0.3045068743519834
+### Distance Threshold: 0.010000000000000002
+### Inlier Ratio: 0.2625236550419032
+### False Match Rate: 0.7374763449580968
+### Registration Recall: 0.2625236550419032
+
+-------------------------------------------------------
+
+ICP Point-to-Point with RANSAC global registration only in first iteration (after using the same initialization)
+Init time: 2024-07-04 20:08:33:807466 UTC
+End time: 2024-07-04 20:08:38:689376 UTC
+Results: 
+### RMSE: 0.2281025157334509
+### Distance Threshold: 0.010000000000000002
+### Inlier Ratio: 0.1722560151392268
+### False Match Rate: 0.8277439848607732
+### Registration Recall: 0.1722560151392268
+
+
+ICP Point-to-Plane with RANSAC global registration in each iteration  (after using the same initialization)
+Init time: 2024-07-04 20:19:17:603977 UTC
+End time: 2024-07-04 20:19:22:903086 UTC
+Results:
+### RMSE: 0.2284357042655521
+### Distance Threshold: 0.010000000000000002
+### Inlier Ratio: 0.1662138415788051
+### False Match Rate: 0.833786158421195
+### Registration Recall: 0.1662138415788051
+
+`
+After I have visualized the registration results and only the ones using ransac in each iteration are good.
