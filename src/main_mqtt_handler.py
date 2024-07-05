@@ -24,6 +24,27 @@ registration_methods = {
 received_frames_dict = {}
 received_frames_lock = threading.Lock()
 
+
+def calculate_voxel_size(point_cloud, percentage):
+    """
+    Calculate recommended voxel size based on a percentage of the bounding box size of an Open3D point cloud.
+
+    Parameters:
+    - point_cloud (open3d.geometry.PointCloud): Open3D point cloud object.
+    - percentage (float): Percentage of the bounding box size that should be used as the voxel size.
+
+    Returns:
+    - float: Recommended voxel size.
+    """
+    # Calculate bounding box dimensions
+    bbox = point_cloud.get_axis_aligned_bounding_box()
+    bbox_size = bbox.get_max_bound() - bbox.get_min_bound()
+
+    # Calculate voxel size based on percentage of bounding box size
+    voxel_size = max(bbox_size) * percentage / 100.0
+
+    return voxel_size
+
 def create_pc_from_encoded_data(color_encoded, depth_encoded, K):
     color_image_data = base64.b64decode(color_encoded)
     depth_image_data = base64.b64decode(depth_encoded)
@@ -55,6 +76,7 @@ def create_pc_from_encoded_data(color_encoded, depth_encoded, K):
     pcd = o3d.geometry.PointCloud.create_from_rgbd_image(rgbd_image, intrinsics)
 
     print(f"PCD len before downsampling {len(pcd.points)}")
+    recommended_box_size = calculate_voxel_size(pcd, 5)
     pcd = pcd.voxel_down_sample(voxel_size=VOXEL_SIZE)
     print(f"PCD len after downsampling {len(pcd.points)}")
     pcd.estimate_normals()
@@ -84,11 +106,11 @@ def process_frame(message_json_list, frame_id):
             continue
         pcd_list.append(pc)
         i += 1
-        # blob_name_reg = f"test__{frame_id}_{i}.ply"  #testing only
-        # save_and_upload_pcd(pc, blob_name_reg) #testing only
-    # x = input("TESTING CONTROL C NOW")
+        blob_name_reg = f"P2P_test__{frame_id}_{i}.ply"  #testing only
+        save_and_upload_pcd(pc, blob_name_reg) #testing only
+    x = input("TESTING CONTROL C NOW")
     print(f"PCD List Length = {len(pcd_list)}")
-    
+
 
     target_registration = message_json_list[0].get('target_model')
     registration_func = registration_methods.get(target_registration)
