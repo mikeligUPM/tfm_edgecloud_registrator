@@ -1,0 +1,15 @@
+[2024-07-08 09:39:41] [INFO] Scene_name: 7-scenes-redkitchen
+[2024-07-08 09:39:41] [INFO]   Correspondence, , c_PIR: 0.900, c_PMR>0: 0.998, c_PMR>=0.1: 0.996, c_PMR>=0.3: 0.986, c_PMR>=0.5: 0.972, f_FMR: 0.998, f_IR: 0.728, f_OV: 0.971
+[2024-07-08 09:39:41] [INFO]   Registration, RR: 0.982, mean_RRE: 1.829, mean_RTE: 0.047, median_RRE: 1.743, median_RTE: 0.042
+
+[2024-07-08 09:39:42] [CRIT]   Coarse Matching, PIR: 0.894, PMR>0: 0.999, PMR>=0.1: 0.998, PMR>=0.3: 0.985, PMR>=0.5: 0.966
+[2024-07-08 09:39:42] [CRIT]     Kitchen, PIR: 0.900, PMR>0: 0.998, PMR>=0.1: 0.996, PMR>=0.3: 0.986, PMR>=0.5: 0.972
+[2024-07-08 09:39:42] [CRIT]     Home_1, PIR: 0.888, PMR>0: 1.000, PMR>=0.1: 1.000, PMR>=0.3: 0.984, PMR>=0.5: 0.960
+
+[2024-07-08 09:39:42] [CRIT]   Fine Matching, FMR: 0.999, IR: 0.729, OV: 0.973, std: 0.001
+[2024-07-08 09:39:42] [CRIT]     Kitchen, FMR: 0.998, IR: 0.728
+[2024-07-08 09:39:42] [CRIT]     Home_1, FMR: 1.000, IR: 0.730
+
+[2024-07-08 09:39:42] [CRIT]   Registration, RR: 0.980, mean_RRE: 1.683, mean_RTE: 0.050, median_RRE: 1.580, median_RTE: 0.045
+[2024-07-08 09:39:42] [CRIT]     Kitchen, RR: 0.982, mean_RRE: 1.829, mean_RTE: 0.047, median_RRE: 1.743, median_RTE: 0.042
+[2024-07-08 09:39:42] [CRIT]     Home_1, RR: 0.978, mean_RRE: 1.537, mean_RTE: 0.052, median_RRE: 1.416, median_RTE: 0.049
