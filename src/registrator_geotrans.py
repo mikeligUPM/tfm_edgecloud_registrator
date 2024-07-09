@@ -13,7 +13,6 @@ import open3d as o3d
 import re
 
 from logger_config import logger
-from constants import BACKBONE_INIT_VOXEL_SIZE
 from helper_funs import calculate_registration_metrics, get_config
 
 #VOXEL_SIZE = 0.00001 * 2.5
