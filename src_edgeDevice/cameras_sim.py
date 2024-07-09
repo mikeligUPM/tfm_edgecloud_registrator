@@ -9,11 +9,14 @@ import open3d as o3d
 import random
 import threading
 
+from logger_config import logger
+
 BROKER_IP = "20.82.113.36"  # Azure broker
 BROKER_PORT = 1883  # Todo: Add security to MQTT
 TOPIC = "cameraframes"
-
 SEND_FREQUENCY = 1  # Time in seconds between sending messages
+
+logger.info(f"Camera simulation started with:\nBROKER_IP: {BROKER_IP}\nBROKER_PORT: {BROKER_PORT}\nTOPIC: {TOPIC}\nSEND_FREQUENCY: {SEND_FREQUENCY}")
 
 K = [
     [585.0, 0.0, 320.0],
@@ -77,10 +80,9 @@ def build_publish_encoded_msg(client, frame_id, camera_name, encoded_color_image
     }
 
     # save_json_to_local(payload, f"encoded_jsons\\{camera_name}_{frame_id}.json")
-    # client.publish(TOPIC, json.dumps(payload))
-    # print(f"Test payload: {payload}")
-    print(f"Sent message to IoT Hub: {frame_id}")
-    time.sleep(0.5)
+    client.publish(TOPIC, json.dumps(payload))
+    # logger.debug(f"Test payload: {payload}")
+    logger.info(f"Camera [{camera_name}] Sent message to IoT Hub: {frame_id}")
 
 
 def get_image_path(camera_dir, frame_id):
@@ -96,12 +98,13 @@ def get_image_path(camera_dir, frame_id):
 
 # Function to process a frame
 def process_frame(client, k_dict, camera_dir, frame_id):
+    camera_name = os.path.basename(camera_dir)
+    logger.info(f"[{frame_id}] Camera {camera_name} INIT")
     color_path, depth_path = get_image_path(camera_dir, frame_id)
 
     encoded_color_image = encode_png_to_base64(color_path)
     encoded_depth_image = encode_png_to_base64(depth_path)
 
-    camera_name = os.path.basename(camera_dir)
 
     if isinstance(k_dict, dict):
         k_list = k_dict[camera_name]
@@ -109,45 +112,46 @@ def process_frame(client, k_dict, camera_dir, frame_id):
         k_list = k_dict
     build_publish_encoded_msg(client, frame_id, camera_name,
                               encoded_color_image, encoded_depth_image, k_list)
+    logger.info(f"[{frame_id}] Camera {camera_name} END")
         
     
        
        
 # Main function to control the flow
-def main(client, base_directory, send_freq=3):
+def start_cam_simulation(client, base_directory, send_freq=3):
+    exit_sim = False
     if '3DMatch' not in base_directory:
         k_dict = create_k_dict_by_camera("cam_params.json")
     else:
         k_dict = K
-    print(f"K dict class: {k_dict.__class__}")
+    # logger.debug((f"K dict class: {k_dict.__class__}")
+    try:
+        while not exit_sim:
+            camera_dirs = [os.path.join(base_directory, d) for d in os.listdir(base_directory) if os.path.isdir(os.path.join(base_directory, d))]
 
-    while True:
-        camera_dirs = [os.path.join(base_directory, d) for d in os.listdir(base_directory) if os.path.isdir(os.path.join(base_directory, d))]
+            chosen_frame = random.choice(range(1, 219))  # Assuming frames are from 1 to 219
+            # chosen_frame = 125
+            
+            if '3DMatch' in base_directory:
+                chosen_frame_str = f"frame-{chosen_frame:06d}"
+            else: # own data
+                chosen_frame_str = f"f{chosen_frame:04d}"
+            logger.info(f"Chosen frame: f{chosen_frame:04d}")
 
-        chosen_frame = random.choice(range(1, 219))  # Assuming frames are from 1 to 219
-        # chosen_frame = 125
-        
-        if '3DMatch' in base_directory:
-            chosen_frame_str = f"frame-{chosen_frame:06d}"
-        else: # own data
-            chosen_frame_str = f"f{chosen_frame:04d}"
-        print(f"Chosen frame: f{chosen_frame:04d}")
+            threads = []
+            for chosen_camera_dir in camera_dirs:
+                # logger.debug((f"Chosen camera directory: {chosen_camera_dir}")
+                thread = threading.Thread(target=process_frame, args=(client, k_dict, chosen_camera_dir, chosen_frame_str))
+                threads.append(thread)
+                thread.start()
+                time.sleep(0.1)
 
-        threads = []
-        for chosen_camera_dir in camera_dirs:
-            print(f"Chosen camera directory: {chosen_camera_dir}")
-            thread = threading.Thread(target=process_frame, args=(client, k_dict, chosen_camera_dir, chosen_frame_str))
-            threads.append(thread)
-            thread.start()
-            time.sleep(0.5)
-
-        time.sleep(send_freq)  # Wait for 5 seconds before choosing another frame and closing threads
-        # x = input("Press enter to continue")
-        # for thread in threads:
-        #     thread.join()  # Wait for all threads to complete
+            time.sleep(send_freq)  # Wait for N seconds before choosing another frame
+    except KeyboardInterrupt:
+        exit_sim = True
 
 def ds_selection_prompt():
-    print("Select the dataset you want to simulate:\n'1': 3DMatch\n'2': Own dataset")
+    logger.info("Select the dataset you want to simulate:\n'1': 3DMatch\n'2': Own dataset")
     ds = input("Selection: ")
     if ds == '1':
         return 'data\\3DMatch'
@@ -157,15 +161,16 @@ def ds_selection_prompt():
 
 if __name__ == "__main__":
     base_directory = ds_selection_prompt()
-    print(f"Selected dataset dir: {base_directory}")
+    logger.info(f"Selected dataset dir: {base_directory}")
     try:
         # Connection to MQTT broker
         client = mqtt.Client()
         client.connect(BROKER_IP, BROKER_PORT)
     except Exception as e:
-        print(f"Could not connect to broker: {e}")
+        logger.error(f"Could not connect to broker: {e}")
     else:
         # Starting data publication
-        print("Connected. Starting publish")
-        main(client, base_directory, send_freq=SEND_FREQUENCY)
+        logger.info("Connected. Starting publish")
+        start_cam_simulation(client, base_directory, send_freq=SEND_FREQUENCY)
+        logger.info("Simulation ended")
     
