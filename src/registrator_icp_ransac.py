@@ -1,7 +1,8 @@
 import open3d as o3d
 import numpy as np
 
-VOXEL_SIZE = 0.025 # 2.5 cm, same as used in Geotransformer
+# VOXEL_SIZE = 0.025 # 2.5 cm, same as used in Geotransformer
+VOXEL_SIZE = 0.00001 * 2.5 ## Own data
 i = 1
 
 def calculate_registration_metrics(pc_source, pc_ref, threshold, p2p_registration=False, final_result_print=False, i=1):
@@ -34,8 +35,9 @@ def calculate_registration_metrics(pc_source, pc_ref, threshold, p2p_registratio
     print(f"### False Match Rate: {fmr}")
 
     # Calculate Registration Recall
-    # Here we assume the ground truth is that all points should be matched within the threshold
-    registration_recall = inlier_ratio  # Since all points are considered for recall
+    true_positives = np.sum(inliers)
+    total_correspondences = len(distances)  # Assuming the ground truth is that all points should be matched
+    registration_recall = true_positives / total_correspondences
     print(f"### Registration Recall: {registration_recall}")
     print("#################################################")
 
@@ -51,9 +53,9 @@ def icp_p2l_registration_ransac(pcd_list):
 
     for i, pcd in enumerate(registered_point_cloud_generator):
         final_fused_point_cloud += pcd  # Use the += operator to merge point clouds
-        calculate_registration_metrics(pcd, pcd_list[0], threshold, i=i+1)
+        calculate_registration_metrics(pcd, pcd_list[0], threshold, i=i+1, final_result_print=(i+1 == 8))
 
-    calculate_registration_metrics(final_fused_point_cloud, pcd_list[0], threshold, final_result_print=True)
+    # calculate_registration_metrics(final_fused_point_cloud, pcd_list[0], threshold, final_result_print=True)
     return final_fused_point_cloud
 
 
@@ -96,9 +98,12 @@ def icp_p2p_registration_ransac(pcd_list):
     threshold = VOXEL_SIZE * 0.4
     final_fused_point_cloud = o3d.geometry.PointCloud()
 
+    # for i, pcd in enumerate(registered_point_cloud_generator):
+    #     final_fused_point_cloud = o3d.geometry.PointCloud.concatenate([final_fused_point_cloud, pcd])
+
     for i, pcd in enumerate(registered_point_cloud_generator):
         final_fused_point_cloud += pcd  # Use the += operator to merge point clouds
-        calculate_registration_metrics(pcd, pcd_list[0], threshold, i=i+1)
+        calculate_registration_metrics(pcd, pcd_list[0], threshold, i=i+1, final_result_print=(i+1 == 8))
 
     calculate_registration_metrics(final_fused_point_cloud, pcd_list[0], threshold, final_result_print=True)
     return final_fused_point_cloud
