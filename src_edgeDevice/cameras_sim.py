@@ -69,14 +69,25 @@ def build_publish_encoded_msg(client, frame_id, camera_name, encoded_color_image
     # encoded_color_image = "test_color"
     # encoded_depth_image = "test_depth"
     
+    ## Payload options
+    ## "reg": target registration method
+    ### 0: icp_p2p_ransac
+    ### 1: icp_p2l_ransac
+    ### 2: geotransformer
+    
+    ## "ds": dataset name
+    ### 0: 3DMatch
+    ### 1: Own data
+    
     payload = {
         "frame_id": frame_id,
         "camera_name": camera_name,
         "enc_c": encoded_color_image,
         "enc_d": encoded_depth_image,
         "K": K,
-        "send_ts": send_ts,
-        "target_model": "icp_p2p"  # either "icp_p2p", "icp_p2l" or "geotransformer"
+        "reg": 1,
+        "ds": 1,
+        "send_ts": send_ts # UTC timestamp
     }
 
     # save_json_to_local(payload, f"encoded_jsons\\{camera_name}_{frame_id}.json")
