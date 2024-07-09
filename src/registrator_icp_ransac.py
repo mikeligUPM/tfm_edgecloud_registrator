@@ -6,23 +6,23 @@ import numpy as np
 i = 1
 
 from logger_config import logger
-# from constants import BACKBONE_INIT_VOXEL_SIZE
 from helper_funs import calculate_registration_metrics, get_config
 
 ########################    ICP P2L    ###########################################
 def icp_p2l_registration_ransac(pcd_list):
     # register point cloud
     vox_size, threshold = get_config(1)
+    logger.debug(f"[TEST] 1 VOXEL SIZE: {vox_size}, THRESHOLD: {threshold}")
     registered_point_cloud_generator = icp_p2l_register_and_yield_point_clouds(pcd_list, vox_size)
     logger.info("P2L Generator created")
-    # threshold = BACKBONE_INIT_VOXEL_SIZE * 0.4
+    # threshold = vox_size * 0.4
     final_fused_point_cloud = o3d.geometry.PointCloud()
 
-    logger.info("P2L registration INIT")
+    logger.info("[TS] P2L registration INIT")
     for i, pcd in enumerate(registered_point_cloud_generator):
         final_fused_point_cloud += pcd  # Use the += operator to merge point clouds
         calculate_registration_metrics(pcd, pcd_list[0], threshold, i=i+1, final_result_print=(i+1 == 8))
-    logger.info("P2L registration END")
+    logger.info("[TS] P2L registration END")
 
     # calculate_registration_metrics(final_fused_point_cloud, pcd_list[0], threshold, final_result_print=True)
     return final_fused_point_cloud
@@ -60,17 +60,18 @@ def icp_p2l(pc_source, pc_ref, vox_size):
 ########################    ICP P2P     ###########################################
 def icp_p2p_registration_ransac(pcd_list):
     vox_size, threshold = get_config(1)
+    logger.debug(f"[TEST] 2 VOXEL SIZE: {vox_size}, THRESHOLD: {threshold}")
     # register point cloud
     registered_point_cloud_generator = icp_p2p_register_and_yield_point_clouds(pcd_list)
     logger.info("P2P Generator created")
     # threshold = vox_size * 0.4
     final_fused_point_cloud = o3d.geometry.PointCloud()
 
-    logger.info("P2P registration INIT")
+    logger.info("[TS] P2P registration INIT")
     for i, pcd in enumerate(registered_point_cloud_generator):
         final_fused_point_cloud += pcd  # Use the += operator to merge point clouds
         calculate_registration_metrics(pcd, pcd_list[0], threshold, i=i+1, final_result_print=(i+1 == 8))
-    logger.info("P2P registration END")
+    logger.info("[TS] P2P registration END")
 
     calculate_registration_metrics(final_fused_point_cloud, pcd_list[0], threshold, final_result_print=True)
     return final_fused_point_cloud
@@ -89,6 +90,7 @@ def icp_p2p_register_and_yield_point_clouds(point_cloud_list):
 
 def icp_p2p(pc_source, pc_ref):
     vox_size, threshold = get_config(1)
+    logger.debug(f"[TEST] 3 VOXEL SIZE: {vox_size}, THRESHOLD: {threshold}")
     source_down, source_fpfh = preprocess_point_cloud(pc_source, vox_size)
     target_down, target_fpfh = preprocess_point_cloud(pc_ref, vox_size)
 
@@ -104,7 +106,8 @@ def icp_p2p(pc_source, pc_ref):
 def execute_global_registration(source_down, target_down, source_fpfh,
                                 target_fpfh, p2p=True):
     vox_size, distance_threshold = get_config(1)
-    # distance_threshold = vox_size * 1.5
+    logger.debug(f"[TEST] 4 VOXEL SIZE: {vox_size}, THRESHOLD: {distance_threshold}")
+    distance_threshold = vox_size * 1.5
     # logger.debug(":: RANSAC registration on downsampled point clouds.")
     result = o3d.pipelines.registration.registration_ransac_based_on_feature_matching(
         source_down, target_down, source_fpfh, target_fpfh, True,
@@ -121,6 +124,7 @@ def execute_global_registration(source_down, target_down, source_fpfh,
 
 def refine_registration(source, target, result_ransac, p2p=True):
     vox_size, distance_threshold = get_config(1)
+    logger.debug(f"[TEST] 5 VOXEL SIZE: {vox_size}, THRESHOLD: {distance_threshold}")
     # distance_threshold = vox_size * 0.4
     if p2p:
         result = o3d.pipelines.registration.registration_icp(

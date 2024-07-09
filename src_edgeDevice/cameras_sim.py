@@ -60,6 +60,9 @@ def encode_png_to_base64(file_path):
         encoded_string = base64.b64encode(image_file.read()).decode('utf-8')
     return encoded_string
 
+def get_message_size(payload):
+    # Calculate size of JSON-encoded payload in bytes
+    return len(json.dumps(payload))
 
 # Function to construct and send message to IoT Hub
 def build_publish_encoded_msg(client, frame_id, camera_name, encoded_color_image, encoded_depth_image, K):
@@ -89,11 +92,16 @@ def build_publish_encoded_msg(client, frame_id, camera_name, encoded_color_image
         "ds": 1,
         "send_ts": send_ts # UTC timestamp
     }
-
+    # Calculate message size
+    message_size = get_message_size(payload)
+    logger.info(f"Message size: {message_size} bytes")
+    
+    
     # save_json_to_local(payload, f"encoded_jsons\\{camera_name}_{frame_id}.json")
-    client.publish(TOPIC, json.dumps(payload))
+    client.publish(TOPIC, json.dumps(payload), qos=1)
     # logger.debug(f"Test payload: {payload}")
-    logger.info(f"Camera [{camera_name}] Sent message to IoT Hub: {frame_id}")
+    logger.info(f"[TS] Camera [{camera_name}] Sent message to IoT Hub: {frame_id}")
+    # time.sleep(2)
 
 
 def get_image_path(camera_dir, frame_id):
@@ -138,10 +146,11 @@ def start_cam_simulation(client, base_directory, send_freq=3):
     # logger.debug((f"K dict class: {k_dict.__class__}")
     try:
         while not exit_sim:
+            i = 0
             camera_dirs = [os.path.join(base_directory, d) for d in os.listdir(base_directory) if os.path.isdir(os.path.join(base_directory, d))]
 
             chosen_frame = random.choice(range(1, 219))  # Assuming frames are from 1 to 219
-            # chosen_frame = 125
+            chosen_frame = 125
             
             if '3DMatch' in base_directory:
                 chosen_frame_str = f"frame-{chosen_frame:06d}"
@@ -158,6 +167,7 @@ def start_cam_simulation(client, base_directory, send_freq=3):
                 time.sleep(0.1)
 
             time.sleep(send_freq)  # Wait for N seconds before choosing another frame
+            x = input("continue? ")
     except KeyboardInterrupt:
         exit_sim = True
 
@@ -165,10 +175,12 @@ def ds_selection_prompt():
     logger.info("Select the dataset you want to simulate:\n'1': 3DMatch\n'2': Own dataset")
     ds = input("Selection: ")
     if ds == '1':
-        return 'data\\3DMatch'
+        return '..\\data\\3DMatch'
     else:
-        return 'data\\png_data'
+        return '..\\data\\png_data'
     
+def on_publish(client, userdata, mid):
+    logger.info(f"Message published successfully with MID: {mid}")
 
 if __name__ == "__main__":
     base_directory = ds_selection_prompt()
@@ -176,7 +188,9 @@ if __name__ == "__main__":
     try:
         # Connection to MQTT broker
         client = mqtt.Client()
+        client.on_publish = on_publish
         client.connect(BROKER_IP, BROKER_PORT)
+        client.loop_start()
     except Exception as e:
         logger.error(f"Could not connect to broker: {e}")
     else:
@@ -184,4 +198,3 @@ if __name__ == "__main__":
         logger.info("Connected. Starting publish")
         start_cam_simulation(client, base_directory, send_freq=SEND_FREQUENCY)
         logger.info("Simulation ended")
-    

@@ -185,7 +185,7 @@ def print_check(num):
 
 ### MAIN
 def geotransformer_reg(pcd_list):
-    logger.info(f"Starting geotrans with pcd len == {len(pcd_list)}")
+    logger.info(f"[TS] Starting geotrans with pcd len == {len(pcd_list)}")
     vox_size, threshold = get_config(0)
     cfg = make_cfg()
     print_check(1)
@@ -204,11 +204,11 @@ def geotransformer_reg(pcd_list):
     print_check(6)
 
     final_fused_point_cloud = o3d.geometry.PointCloud()
-    logger.info(f"Geotrans registration INIT")
+    logger.info(f"[TS] Geotrans registration INIT")
     for i, pcd in enumerate(registered_point_cloud_generator):
         final_fused_point_cloud += pcd  # Use the += operator to merge point clouds
         calculate_registration_metrics(final_fused_point_cloud, pcd_list[0], threshold=threshold)
-    logger.info(f"Geotrans registration END")
+    logger.info(f"[TS] Geotrans registration END")
     print_check(98)
     calculate_registration_metrics(final_fused_point_cloud, pcd_list[0], threshold=threshold, final_result_print=True)
     logger.debug(f"TOTAL FINAL PCD POINTS == {final_fused_point_cloud.points}  with class == {final_fused_point_cloud.__class__}")
