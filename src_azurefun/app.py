@@ -1,34 +1,11 @@
-
-
-
 from flask import Flask, request, render_template_string
 import open3d as o3d
-
-from visualizer_blob_downloader import find_target_blob
+from visualizer_blob_downloader import *
 
 app = Flask(__name__)
 
 # Enable WebRTC for Open3D
 o3d.visualization.webrtc_server.enable_webrtc()
-
-# HTML template for the form
-# html_template = '''
-# <!doctype html>
-# <html>
-# <head>
-#     <title>PLY File Viewer</title>
-# </head>
-# <body>
-#     <h1>Enter Parameters to Load PLY File</h1>
-#     <form method="post">
-#         registration type: <input type="text" name="reg_type"><br>
-#         dataset: <input type="text" name="seq"><br>
-#         frame: <input type="text" name="frame"><br>
-#         <input type="submit" value="Load and Visualize">
-#     </form>
-# </body>
-# </html>
-# '''
 
 html_template = '''
 <!doctype html>
@@ -45,7 +22,7 @@ html_template = '''
                     url: '/',
                     data: $(this).serialize(),
                     success: function(response) {
-                        $('#result').html(response.message);
+                        $('#result').html(response);
                     },
                     error: function() {
                         $('#result').html('An error occurred.');
@@ -57,18 +34,29 @@ html_template = '''
                 updateFrameOptions();
             });
 
+            $('#blob-select').on('change', function() {
+                var selectedBlob = $(this).val();
+                if (selectedBlob && selectedBlob !== '----') {
+                    $('input[name="reg_type"]').prop('disabled', true);
+                    $('input[name="seq"]').prop('disabled', true);
+                    $('#frame-options').prop('disabled', true);
+                } else {
+                    $('input[name="reg_type"]').prop('disabled', false);
+                    $('input[name="seq"]').prop('disabled', false);
+                    $('#frame-options').prop('disabled', false);
+                }
+            });
+
             function updateFrameOptions() {
                 var dataset = $('input[name="seq"]:checked').val();
                 var frameOptions = '<option value="" selected disabled>Select Frame</option>';
                 
                 if (dataset === '3DMatch') {
-                    // Options for 3DMatch dataset
                     for (var i = 0; i <= 20; i++) {
                         var frame = 'frame-' + String(i).padStart(6, '0');
                         frameOptions += '<option value="' + frame + '">' + frame + '</option>';
                     }
                 } else if (dataset === 'Own data') {
-                    // Options for Own data dataset
                     for (var i = 1; i <= 21; i++) {
                         var frame = 'f' + String(i).padStart(4, '0');
                         frameOptions += '<option value="' + frame + '">' + frame + '</option>';
@@ -81,45 +69,65 @@ html_template = '''
 </head>
 <body>
     <h1>Enter Parameters to Load PLY File</h1>
-    <form method="post">
-        <h3>Registration Type:</h3>
-        <label><input type="radio" name="reg_type" value="icp_p2p_ransac"> ICP P2P RANSAC</label><br>
-        <label><input type="radio" name="reg_type" value="icp_p2l_ransac"> ICP P2L RANSAC</label><br>
-        <label><input type="radio" name="reg_type" value="geotransformer"> GeoTransformer</label><br>
-        
-        <h3>Dataset:</h3>
-        <label><input type="radio" name="seq" value="3DMatch"> 3DMatch</label><br>
-        <label><input type="radio" name="seq" value="Own data"> Own Data</label><br>
-        
-        <h3>Frame:</h3>
-        <select name="frame" id="frame-options">
-            <option value="" selected disabled>Select Frame</option>
-            <!-- Frame options will be populated based on dataset selection -->
-        </select>
-        
-        <input type="submit" value="Load and Visualize">
-    </form>
+    <div style="display: flex; justify-content: space-between;">
+        <div>
+            <form method="post">
+                <h3>Registration Type:</h3>
+                <label><input type="radio" name="reg_type" value="icp_p2p_ransac"> ICP P2P RANSAC</label><br>
+                <label><input type="radio" name="reg_type" value="icp_p2l_ransac"> ICP P2L RANSAC</label><br>
+                <label><input type="radio" name="reg_type" value="geotransformer"> GeoTransformer</label><br>
+                
+                <h3>Dataset:</h3>
+                <label><input type="radio" name="seq" value="3DMatch"> 3DMatch</label><br>
+                <label><input type="radio" name="seq" value="Own data"> Own Data</label><br>
+                
+                <h3>Frame:</h3>
+                <select name="frame" id="frame-options">
+                    <option value="" selected disabled>Select Frame</option>
+                    <!-- Frame options will be populated based on dataset selection -->
+                </select>
+                
+                <h3>Select Blob:</h3>
+                <select id="blob-select" name="blob">
+                    <option value="----" selected>----</option>
+                    <!-- Blob options will be populated here -->
+                    <!-- For example: -->
+                    <option value="blob1.ply">blob1.ply</option>
+                    <option value="blob2.ply">blob2.ply</option>
+                    <!-- Add more options dynamically based on available blobs -->
+                </select>
+                
+                <input type="submit" value="Load and Visualize">
+            </form>
+        </div>
+    </div>
     <div id="result"></div>
 </body>
 </html>
 
 
-
-'''
-
+'''  # Use the updated HTML template here
 
 @app.route('/', methods=['GET', 'POST'])
 def index():
+    blob_service_client = get_blob_service_client_connection_string()
+    blob_list = list_blobs_sorted(blob_service_client, 'cameraframes')
+    blob_options = '<option value="----" selected>----</option>'
+    blob_options += ''.join([f'<option value="{blob}">{blob}</option>' for blob in blob_list])
+    
     if request.method == 'POST':
         reg_type = request.form.get('reg_type')
-        # seq = request.form.get('seq')
         frame = request.form.get('frame')
+        blob = request.form.get('blob')
         
-        if reg_type and frame:
-            # o3d.visualization.webrtc_server.enable_webrtc()
-            # filename = f"{reg_type}__{seq}__{frame}.ply"
+        filename = None
+        if blob and blob != '----':
+            filename = download_blob(blob_service_client, blob)
+        elif reg_type and frame:
+            filename = find_target_blob(frame, reg_type)
+        
+        if filename:
             try:
-                filename = find_target_blob(frame, reg_type)
                 pcd = o3d.io.read_point_cloud(filename)
                 o3d.visualization.draw_geometries([pcd])
                 return f"Loaded and visualized: {filename}"
@@ -128,7 +136,8 @@ def index():
         else:
             return "Please provide all parameters."
     
-    return render_template_string(html_template)
+    # On GET request, render the form and populate blob options
+    return render_template_string(html_template.replace('<!-- Blob options will be populated here -->', blob_options))
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000)

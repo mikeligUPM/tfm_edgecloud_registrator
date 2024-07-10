@@ -22,6 +22,15 @@ def list_blobs_sorted(blob_service_client: BlobServiceClient, container_name):
     # # logging.info(f"Sorted blobs: {sorted_blobs}")
     return blob_names
 
+
+def download_blob(blob_service_client, target_blob):
+    blob_client = blob_service_client.get_blob_client(container=BLOB_CONTAINER_NAME, blob=target_blob)
+    with open(target_blob, "wb") as download_file:
+        download_file.write(blob_client.download_blob().readall())
+    logging.info(f"Downloaded blob: {target_blob}")
+    return target_blob
+
+
 def find_target_blob(frame_id, registration_method, dataset_name=None) -> str:
     blob_service_client = get_blob_service_client_connection_string()
     if blob_service_client:
@@ -29,10 +38,7 @@ def find_target_blob(frame_id, registration_method, dataset_name=None) -> str:
         target_blob = f"reg__{frame_id}__{registration_method}.ply"
         if target_blob in blob_list:
             logging.info(f"Found target blob: {target_blob}. Going to download it.")
-            blob_client = blob_service_client.get_blob_client(container=BLOB_CONTAINER_NAME, blob=target_blob)
-            with open(target_blob, "wb") as download_file:
-                download_file.write(blob_client.download_blob().readall())
-            logging.info(f"Downloaded blob: {target_blob}")
+            target_blob = download_blob(blob_service_client, target_blob)
             return target_blob
     else:
         logging.error("Failed to get BlobServiceClient") 
