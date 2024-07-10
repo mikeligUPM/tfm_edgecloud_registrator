@@ -11,7 +11,8 @@ import threading
 
 from logger_config import logger
 
-BROKER_IP = "20.82.113.36"  # Azure broker
+# BROKER_IP = "20.82.113.36"  # Azure broker
+BROKER_IP = "172.205.149.105"  # Azure broker
 BROKER_PORT = 1883  # Todo: Add security to MQTT
 TOPIC = "cameraframes"
 SEND_FREQUENCY = 1  # Time in seconds between sending messages
