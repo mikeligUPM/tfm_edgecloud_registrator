@@ -16,9 +16,9 @@ def list_blobs_sorted(blob_service_client: BlobServiceClient, container_name):
     container_client = blob_service_client.get_container_client(container_name)
     blob_list = list(container_client.list_blobs())
 
-    blob_names = [blob.name for blob in blob_list]
+    sorted_blobs = sorted(blob_list, key=lambda b: b.creation_time, reverse=True)
+    blob_names = [blob.name for blob in sorted_blobs]
     # # Sort blobs by last modified time (if available) or use creation time
-    # sorted_blobs = sorted(blob_list, key=lambda b: b.creation_time, reverse=True)
     # # logging.info(f"Sorted blobs: {sorted_blobs}")
     return blob_names
 

@@ -33,7 +33,13 @@ registration_names_from_id = {
     2: "geotransformer"
 }
 
-batch_timeout = 60 # seconds
+
+dataset_name_from_id = {
+    0: "3DMatch",
+    1: "ownData"
+}
+
+batch_timeout = 10 # seconds
 
 received_frames_dict = {}
 received_frames_lock = threading.Lock()
@@ -77,6 +83,7 @@ def create_pc_from_encoded_data(color_encoded, depth_encoded, K, target_ds):
     pcd.estimate_normals()
     return pcd
 
+
 def process_frame(message_json_list, frame_id):
     pcd_list = []
     i = 1
@@ -106,18 +113,15 @@ def process_frame(message_json_list, frame_id):
     target_registration = message_json_list[0].get('reg')
     registration_func = registration_methods.get(target_registration)
     if registration_func:
-        final_fused_point_cloud = registration_func(pcd_list)
+        final_fused_point_cloud = registration_func(pcd_list, target_ds)
     else:
         logger.warning(f"Frame [{frame_id}] Unknown registration method: {target_registration}")
     if final_fused_point_cloud:
         logger.debug(f"Frame [{frame_id}] Registration successful")
         
-        try:
-            reg_name = registration_names_from_id.get(target_registration)
-        except Exception as e:
-            reg_name = "unknown"
-            logger.error(f"Error getting registration name: {e}")
-        blob_name_reg = f"reg__{frame_id}__{reg_name}.ply"
+        reg_name = reg_name = registration_names_from_id.get(target_registration, "unknown")
+        dataset_name = dataset_name_from_id.get(target_ds, "unknown")
+        blob_name_reg = f"reg__{frame_id}__{reg_name}__{dataset_name}.ply"
         save_and_upload_pcd(final_fused_point_cloud, blob_name_reg)
     else:
         logger.info(f"Frame [{frame_id}] Final PCD is None. Please check error logs.")

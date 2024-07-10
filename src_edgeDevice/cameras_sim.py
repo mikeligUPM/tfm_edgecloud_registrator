@@ -24,6 +24,16 @@ K = [
     [0.0, 0.0, 1.0]
 ]
 
+dataset_name_from_id = {
+    0: "3DMatch",
+    1: "ownData"
+}
+
+dataset_id_from_name = {
+    "3DMatch": 0,
+    "ownData": 1
+}
+
 def save_json_to_local(payload, file_path):
     with open(file_path, 'w') as json_file:
         json.dump(payload, json_file, indent=4)
@@ -65,7 +75,7 @@ def get_message_size(payload):
     return len(json.dumps(payload))
 
 # Function to construct and send message to IoT Hub
-def build_publish_encoded_msg(client, frame_id, camera_name, encoded_color_image, encoded_depth_image, K):
+def build_publish_encoded_msg(client, frame_id, camera_name, encoded_color_image, encoded_depth_image, K, dataset_id):
     dt_now = datetime.now(tz=timezone.utc)
     send_ts = round(dt_now.timestamp() * 1000)
 
@@ -88,8 +98,8 @@ def build_publish_encoded_msg(client, frame_id, camera_name, encoded_color_image
         "enc_c": encoded_color_image,
         "enc_d": encoded_depth_image,
         "K": K,
-        "reg": 1,
-        "ds": 1,
+        "reg": 0,
+        "ds": dataset_id,
         "send_ts": send_ts # UTC timestamp
     }
     # Calculate message size
@@ -116,7 +126,7 @@ def get_image_path(camera_dir, frame_id):
     
 
 # Function to process a frame
-def process_frame(client, k_dict, camera_dir, frame_id):
+def process_frame(client, k_dict, camera_dir, frame_id, dataset_id):
     camera_name = os.path.basename(camera_dir)
     logger.info(f"[{frame_id}] Camera {camera_name} INIT")
     color_path, depth_path = get_image_path(camera_dir, frame_id)
@@ -130,20 +140,19 @@ def process_frame(client, k_dict, camera_dir, frame_id):
     elif isinstance(k_dict, list):
         k_list = k_dict
     build_publish_encoded_msg(client, frame_id, camera_name,
-                              encoded_color_image, encoded_depth_image, k_list)
+                              encoded_color_image, encoded_depth_image, k_list, dataset_id)
     logger.info(f"[{frame_id}] Camera {camera_name} END")
         
     
        
        
 # Main function to control the flow
-def start_cam_simulation(client, base_directory, send_freq=3):
+def start_cam_simulation(client, base_directory, dataset_id, send_freq=3):
     exit_sim = False
-    if '3DMatch' not in base_directory:
+    if dataset_id == 1: # Own dataset
         k_dict = create_k_dict_by_camera("cam_params.json")
     else:
-        k_dict = K
-    # logger.debug((f"K dict class: {k_dict.__class__}")
+        k_dict = K # 3DMatch dataset
     try:
         while not exit_sim:
             i = 0
@@ -152,16 +161,22 @@ def start_cam_simulation(client, base_directory, send_freq=3):
             chosen_frame = random.choice(range(1, 219))  # Assuming frames are from 1 to 219
             chosen_frame = 125
             
-            if '3DMatch' in base_directory:
+            if dataset_id == 0: # 3DMatch
                 chosen_frame_str = f"frame-{chosen_frame:06d}"
-            else: # own data
+            elif dataset_id == 1: # own data
                 chosen_frame_str = f"f{chosen_frame:04d}"
+            else:
+                logger.error(f"Invalid dataset_id: {dataset_id}")
+                exit_sim = True
+                break
+            
+            logger.info(f"Using {dataset_name_from_id[dataset_id]} dataset")
             logger.info(f"Chosen frame: f{chosen_frame:04d}")
 
             threads = []
             for chosen_camera_dir in camera_dirs:
                 # logger.debug((f"Chosen camera directory: {chosen_camera_dir}")
-                thread = threading.Thread(target=process_frame, args=(client, k_dict, chosen_camera_dir, chosen_frame_str))
+                thread = threading.Thread(target=process_frame, args=(client, k_dict, chosen_camera_dir, chosen_frame_str, dataset_id))
                 threads.append(thread)
                 thread.start()
                 time.sleep(0.1)
@@ -172,19 +187,19 @@ def start_cam_simulation(client, base_directory, send_freq=3):
         exit_sim = True
 
 def ds_selection_prompt():
-    logger.info("Select the dataset you want to simulate:\n'1': 3DMatch\n'2': Own dataset")
+    logger.info("Select the dataset you want to simulate:\n'0': 3DMatch\n'1': Own dataset")
     ds = input("Selection: ")
-    if ds == '1':
-        return '..\\data\\3DMatch'
+    if ds == '0':
+        return '..\\data\\3DMatch', 0
     else:
-        return '..\\data\\png_data'
+        return '..\\data\\png_data', 1
     
 def on_publish(client, userdata, mid):
     logger.info(f"Message published successfully with MID: {mid}")
 
 if __name__ == "__main__":
-    base_directory = ds_selection_prompt()
-    logger.info(f"Selected dataset dir: {base_directory}")
+    base_directory, dataset_id = ds_selection_prompt()
+    logger.info(f"Selected dataset dir: {base_directory}  dataset: {dataset_id}")
     try:
         # Connection to MQTT broker
         client = mqtt.Client()
@@ -196,5 +211,5 @@ if __name__ == "__main__":
     else:
         # Starting data publication
         logger.info("Connected. Starting publish")
-        start_cam_simulation(client, base_directory, send_freq=SEND_FREQUENCY)
+        start_cam_simulation(client, base_directory, dataset_id ,send_freq=SEND_FREQUENCY)
         logger.info("Simulation ended")

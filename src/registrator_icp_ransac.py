@@ -9,13 +9,13 @@ from logger_config import logger
 from helper_funs import calculate_registration_metrics, get_config
 
 ########################    ICP P2L    ###########################################
-def icp_p2l_registration_ransac(pcd_list):
+def icp_p2l_registration_ransac(pcd_list, target_ds):
     # register point cloud
-    vox_size, threshold = get_config(1)
+    vox_size, threshold = get_config(target_ds)
     logger.debug(f"[TEST] 1 VOXEL SIZE: {vox_size}, THRESHOLD: {threshold}")
-    registered_point_cloud_generator = icp_p2l_register_and_yield_point_clouds(pcd_list, vox_size)
+    registered_point_cloud_generator = icp_p2l_register_and_yield_point_clouds(pcd_list, vox_size, target_ds)
     logger.info("P2L Generator created")
-    # threshold = vox_size * 0.4
+    threshold = vox_size * 0.4
     final_fused_point_cloud = o3d.geometry.PointCloud()
 
     logger.info("[TS] P2L registration INIT")
@@ -28,7 +28,7 @@ def icp_p2l_registration_ransac(pcd_list):
     return final_fused_point_cloud
 
 
-def icp_p2l_register_and_yield_point_clouds(point_cloud_list, vox_size):
+def icp_p2l_register_and_yield_point_clouds(point_cloud_list, vox_size, target_ds):
         ref_pc = point_cloud_list[0]
         radius_normal = vox_size * 2
         ref_pc.estimate_normals(
@@ -41,30 +41,30 @@ def icp_p2l_register_and_yield_point_clouds(point_cloud_list, vox_size):
             radius_normal = vox_size * 2
             src_pc.estimate_normals(
                 o3d.geometry.KDTreeSearchParamHybrid(radius=radius_normal, max_nn=30))
-            _, transformed_pc = icp_p2l(src_pc, ref_pc, vox_size)
+            _, transformed_pc = icp_p2l(src_pc, ref_pc, vox_size, target_ds)
 
             yield transformed_pc  # Yield the transformed point cloud
 
-def icp_p2l(pc_source, pc_ref, vox_size):
+def icp_p2l(pc_source, pc_ref, vox_size, target_ds):
     source_down, source_fpfh = preprocess_point_cloud(pc_source, vox_size)
     target_down, target_fpfh = preprocess_point_cloud(pc_ref, vox_size)
 
     result_ransac = execute_global_registration(source_down, target_down,
-                                            source_fpfh, target_fpfh, vox_size)
+                                            source_fpfh, target_fpfh, vox_size, target_ds)
 
-    result_icp = refine_registration(pc_source, pc_ref, result_ransac, p2p=False)
+    result_icp = refine_registration(pc_source, pc_ref, result_ransac, target_ds, p2p=False)
     pc_source_aligned = pc_source.transform(result_icp.transformation)
     return pc_ref, pc_source_aligned
 
 
 ########################    ICP P2P     ###########################################
-def icp_p2p_registration_ransac(pcd_list):
-    vox_size, threshold = get_config(1)
+def icp_p2p_registration_ransac(pcd_list, target_ds):
+    vox_size, threshold = get_config(target_ds)
     logger.debug(f"[TEST] 2 VOXEL SIZE: {vox_size}, THRESHOLD: {threshold}")
     # register point cloud
-    registered_point_cloud_generator = icp_p2p_register_and_yield_point_clouds(pcd_list)
+    registered_point_cloud_generator = icp_p2p_register_and_yield_point_clouds(pcd_list, target_ds)
     logger.info("P2P Generator created")
-    # threshold = vox_size * 0.4
+    threshold = vox_size * 0.4
     final_fused_point_cloud = o3d.geometry.PointCloud()
 
     logger.info("[TS] P2P registration INIT")
@@ -76,7 +76,7 @@ def icp_p2p_registration_ransac(pcd_list):
     calculate_registration_metrics(final_fused_point_cloud, pcd_list[0], threshold, final_result_print=True)
     return final_fused_point_cloud
 
-def icp_p2p_register_and_yield_point_clouds(point_cloud_list):
+def icp_p2p_register_and_yield_point_clouds(point_cloud_list, target_ds):
     ref_pc = point_cloud_list[0]
 
     yield ref_pc  # Yield the reference point cloud as is
@@ -84,28 +84,28 @@ def icp_p2p_register_and_yield_point_clouds(point_cloud_list):
     for i in range(1, len(point_cloud_list)):
         src_pc = point_cloud_list[i]
         # _, transformed_pc = icp_registration(src_pc, ref_pc)
-        _, transformed_pc = icp_p2p(src_pc, ref_pc)
+        _, transformed_pc = icp_p2p(src_pc, ref_pc, target_ds)
 
         yield transformed_pc  # Yield the transformed point cloud
 
-def icp_p2p(pc_source, pc_ref):
-    vox_size, threshold = get_config(1)
+def icp_p2p(pc_source, pc_ref, target_ds):
+    vox_size, threshold = get_config(target_ds)
     logger.debug(f"[TEST] 3 VOXEL SIZE: {vox_size}, THRESHOLD: {threshold}")
     source_down, source_fpfh = preprocess_point_cloud(pc_source, vox_size)
     target_down, target_fpfh = preprocess_point_cloud(pc_ref, vox_size)
 
     result_ransac = execute_global_registration(source_down, target_down,
-                                            source_fpfh, target_fpfh)
+                                            source_fpfh, target_fpfh, target_ds)
 
-    result_icp = refine_registration(pc_source, pc_ref, result_ransac, p2p=True)
+    result_icp = refine_registration(pc_source, pc_ref, result_ransac, target_ds, p2p=True)
     pc_source_aligned = pc_source.transform(result_icp.transformation)
     return pc_ref, pc_source_aligned
 
 
 ########################    HELPER FUNS     ###########################################
 def execute_global_registration(source_down, target_down, source_fpfh,
-                                target_fpfh, p2p=True):
-    vox_size, distance_threshold = get_config(1)
+                                target_fpfh,target_ds, p2p=True):
+    vox_size, distance_threshold = get_config(target_ds)
     logger.debug(f"[TEST] 4 VOXEL SIZE: {vox_size}, THRESHOLD: {distance_threshold}")
     distance_threshold = vox_size * 1.5
     # logger.debug(":: RANSAC registration on downsampled point clouds.")
@@ -122,10 +122,10 @@ def execute_global_registration(source_down, target_down, source_fpfh,
     return result
 
 
-def refine_registration(source, target, result_ransac, p2p=True):
-    vox_size, distance_threshold = get_config(1)
+def refine_registration(source, target, result_ransac, target_ds, p2p=True):
+    vox_size, distance_threshold = get_config(target_ds)
     logger.debug(f"[TEST] 5 VOXEL SIZE: {vox_size}, THRESHOLD: {distance_threshold}")
-    # distance_threshold = vox_size * 0.4
+    distance_threshold = vox_size * 0.4
     if p2p:
         result = o3d.pipelines.registration.registration_icp(
             source, target, distance_threshold, result_ransac.transformation,
@@ -149,19 +149,3 @@ def preprocess_point_cloud(pcd, vox_size):
         pcd_down,
         o3d.geometry.KDTreeSearchParamHybrid(radius=radius_feature, max_nn=100))
     return pcd_down, pcd_fpfh
-
-
-# def execute_global_registration(source_down, target_down, source_fpfh,
-#                                 target_fpfh, vox_size):
-#     distance_threshold = vox_size * 1.5
-#     result = o3d.pipelines.registration.registration_ransac_based_on_feature_matching(
-#         source_down, target_down, source_fpfh, target_fpfh, True,
-#         distance_threshold,
-#         o3d.pipelines.registration.TransformationEstimationPointToPoint(False),
-#         3, [
-#             o3d.pipelines.registration.CorrespondenceCheckerBasedOnEdgeLength(
-#                 0.9),
-#             o3d.pipelines.registration.CorrespondenceCheckerBasedOnDistance(
-#                 distance_threshold)
-#         ], o3d.pipelines.registration.RANSACConvergenceCriteria(100000, 0.999))
-#     return result

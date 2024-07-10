@@ -7,7 +7,7 @@ def get_config(id_dataset):
         BACKBONE_INIT_VOXEL_SIZE = 0.025
         threshold = 0.01
     elif id_dataset == 1: #own data
-        BACKBONE_INIT_VOXEL_SIZE = 0.0001 * 2.5
+        BACKBONE_INIT_VOXEL_SIZE = 0.00001 * 2.5
         threshold = 0.0025
         # threshold = 1e-05
     else: # use 3dmatch as default
