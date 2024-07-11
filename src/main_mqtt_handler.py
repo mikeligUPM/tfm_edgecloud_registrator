@@ -65,7 +65,13 @@ def create_pc_from_encoded_data(color_encoded, depth_encoded, K, target_ds):
     except Exception as e:
         logger.error(f"Error loading image: {e}   || len depth_image_data: {len(depth_image_data)}  len color: {len(color_image_data)}\n")
         return None
-
+    try:
+        # Convert BGR to RGB
+        color_image = cv2.cvtColor(color_image, cv2.COLOR_BGR2RGB)
+    except Exception as e:
+        logger.error(f"Error converting color image to RGB: {e}")
+        
+        
     depth_raw = o3d.geometry.Image(depth_image.astype(np.float32) / 1000.0)
     color_raw = o3d.geometry.Image(color_image)
     rgbd_image = o3d.geometry.RGBDImage.create_from_color_and_depth(color_raw, depth_raw, convert_rgb_to_intensity=False)
