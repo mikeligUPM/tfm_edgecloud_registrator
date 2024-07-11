@@ -184,7 +184,7 @@ def print_check(num):
     logger.debug(f"CHECKPOINT {num}")
 
 ### MAIN
-def geotransformer_reg(pcd_list):
+def geotrans_registration(pcd_list):
     logger.info(f"[TS] Starting geotrans with pcd len == {len(pcd_list)}")
     vox_size, threshold = get_config(0)
     cfg = make_cfg()
